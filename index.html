@@ -1,0 +1,77 @@
+
+//<canvas id="canvas"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.4.0/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ml5@0.12.2/dist/ml5.min.js"></script>
+<script>
+    const canvas = document.getElementById('canvas');
+const context = canvas.getContext('2d');
+
+// Set canvas dimensions
+canvas.width = 600;
+canvas.height = 480;
+
+// Mirror the canvas horizontally
+canvas.style.transform = 'scaleX(-1)';
+
+const video = document.createElement('video');
+let poseNet;
+let poses = [];
+
+function setup() {
+  video.width = canvas.width;
+  video.height = canvas.height;
+}
+
+function draw() {
+  if (video.readyState >= video.HAVE_CURRENT_DATA) {
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    if (poses.length > 0) {
+      drawHeadTracking();
+    }
+  }
+
+  requestAnimationFrame(draw);
+}
+
+function modelReady() {
+  console.log('PoseNet model ready');
+}
+
+function gotPoses(results) {
+  poses = results;
+}
+
+function drawHeadTracking() {
+    for (const pose of poses) {
+      const nose = pose.pose.keypoints[0];
+  
+      if (nose.score > 0.5) {
+        context.beginPath();
+        context.arc(nose.position.x, nose.position.y, 10, 0, 2 * Math.PI);
+        context.fillStyle = 'red';
+        context.fill();
+      }
+    }
+  }
+  
+
+function startCamera() {
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+      video.srcObject = stream;
+      video.play();
+      poseNet = ml5.poseNet(video, modelReady);
+      poseNet.on('pose', gotPoses);
+      setup();
+      draw();
+    })
+    .catch(err => {
+      console.error('Error accessing camera:', err);
+    });
+}
+
+startCamera();
+
+</script>
+
